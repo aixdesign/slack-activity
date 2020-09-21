@@ -5,14 +5,24 @@
 import os
 from slack import WebClient
 from member import Member
+# import args
 from datetime import datetime, timedelta
 import csv
 
+# # set argument variables
+# ap = argparse.ArgumentParser()
+# ap.add_argument("-d", "--days", required=True, help="range of days to analyze activity")
+# args = vars(ap.parse_args())
+# Variable for range of days to analyze activity (30 or 45)
+DAYS = 30
+
+# connect to slack
 SLACK_TOKEN = os.environ["SLACK_TOKEN"]
 client = WebClient(token=SLACK_TOKEN)
 
 # get list of members that have not been deactivated and are not bots
 users = client.users_list()
+print(users)
 members = users["members"]
 
 # Get list of channels
@@ -21,7 +31,7 @@ conversations = response["channels"]
 
 # look through all public channels that has not been archived (is_channel = True, is_archived = False)
 # time range to look for messages
-range_in_days = 30
+range_in_days = DAYS
 oldest_date = datetime.today() - timedelta(days=range_in_days)
 oldest = (oldest_date - datetime(1970, 1, 1)).total_seconds()
 
@@ -65,8 +75,11 @@ count = 0
 # relevant info (id, name, real_name, profile.display_name_normalized, profile.display_name, profile.real_name, profile.real_name_normalized, profile.email
 
 # set up file name based on today's date & date_range
+output_folder = 'output'
+filename = datetime.today().strftime('%Y%m%d') + '_inactive_members_' + str(range_in_days) + 'days.csv'
+output_path = os.path.join(output_folder, filename)
 
-with open('inactive_members.csv', mode='w+') as file:
+with open(output_path, mode='w+') as file:
     fieldnames = ['id', 'name', 'real_name', 'display_name', 'email']
     writer = csv.writer(file, delimiter=',', quoting=csv.QUOTE_MINIMAL)
     writer.writerow(fieldnames)
@@ -83,7 +96,7 @@ with open('inactive_members.csv', mode='w+') as file:
                 setattr(m, 'email', member['profile']['email'])
 
             except Exception as e:
-                print(e)
+                print("{}: {}, {} not found".format(member['id'], member['name'], e))
 
             # get relevant info and write to csv
             # writer.writerow([member['id'], member['name'], member['real_name', member['profile']['display_name'], member['profile']['display_name_normalized'], member['profile']['real_name'], member['profile']['real_name_normalized'], member['profile']['email']]])
